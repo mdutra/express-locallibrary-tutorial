@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
-const favicon = require('serve-favicon');
+// const favicon = require('serve-favicon');
 const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
@@ -21,8 +21,8 @@ app.use(helmet());
 // Set up mongoose connection
 const mongoose = require('mongoose');
 
-const dev_db_url = `mongodb://${process.env.DB_USER}:${process.env.DB_PASS}@ds161016.mlab.com:61016/local_library`;
-const mongoDB = process.env.MONGODB_URI || dev_db_url;
+const devDbUrl = `mongodb://${process.env.DB_USER}:${process.env.DB_PASS}@ds161016.mlab.com:61016/local_library`;
+const mongoDB = process.env.MONGODB_URI || devDbUrl;
 mongoose.connect(mongoDB, {
   useMongoClient: true,
 });
@@ -48,7 +48,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', index);
 app.use('/users', users);
-app.use('/catalog', catalog);  // Add catalog routes to middleware chain.
+app.use('/catalog', catalog); // Add catalog routes to middleware chain.
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
