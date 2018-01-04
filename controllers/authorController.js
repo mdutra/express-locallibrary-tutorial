@@ -9,10 +9,13 @@ const { sanitizeBody } = require('express-validator/filter');
 exports.author_list = function (req, res, next) {
   Author.find()
     .sort([['family_name', 'ascending']])
-    .exec((err, list_authors) => {
-      if (err) { return next(err); }
+    .exec((err, listAuthors) => {
+      if (err) {
+        next(err);
+      } else {
       // Successful, so render
-      res.render('author_list', { title: 'Author List', author_list: list_authors });
+        res.render('author_list', { title: 'Author List', author_list: listAuthors });
+      }
     });
 };
 
@@ -28,14 +31,17 @@ exports.author_detail = function (req, res, next) {
         .exec(callback);
     },
   }, (err, results) => {
-    if (err) { return next(err); } // Error in API usage.
-    if (results.author == null) { // No results.
-      var err = new Error('Author not found');
-      err.status = 404;
-      return next(err);
+    // Error in API usage.
+    if (err) {
+      next(err);
+    } else if (results.author == null) { // No results.
+      const e = new Error('Author not found');
+      e.status = 404;
+      next(e);
+    } else {
+      // Successful, so render.
+      res.render('author_detail', { title: 'Author Detail', author: results.author, author_books: results.authors_books });
     }
-    // Successful, so render.
-    res.render('author_detail', { title: 'Author Detail', author: results.author, author_books: results.authors_books });
   });
 };
 
@@ -83,9 +89,12 @@ exports.author_create_post = [
     }
     // Data from form is valid.
     author.save((err) => {
-      if (err) { return next(err); }
-      // Successful - redirect to new author record.
-      res.redirect(author.url);
+      if (err) {
+        next(err);
+      } else {
+        // Successful - redirect to new author record.
+        res.redirect(author.url);
+      }
     });
   },
 ];
@@ -101,12 +110,14 @@ exports.author_delete_get = function (req, res, next) {
       Book.find({ author: req.params.id }).exec(callback);
     },
   }, (err, results) => {
-    if (err) { return next(err); }
-    if (results.author == null) { // No results.
+    if (err) {
+      next(err);
+    } else if (results.author == null) { // No results.
       res.redirect('/catalog/authors');
+    } else {
+      // Successful, so render.
+      res.render('author_delete', { title: 'Delete Author', author: results.author, author_books: results.authors_books });
     }
-    // Successful, so render.
-    res.render('author_delete', { title: 'Delete Author', author: results.author, author_books: results.authors_books });
   });
 };
 
@@ -120,34 +131,40 @@ exports.author_delete_post = function (req, res, next) {
       Book.find({ author: req.body.authorid }).exec(callback);
     },
   }, (err, results) => {
-    if (err) { return next(err); }
+    if (err) {
+      next(err);
+    }
     // Success
     if (results.authors_books.length > 0) {
       // Author has books. Render in same way as for GET route.
       res.render('author_delete', { title: 'Delete Author', author: results.author, author_books: results.authors_books });
-      return;
+    } else {
+      // Author has no books. Delete object and redirect to the list of authors.
+      Author.findByIdAndRemove(req.body.authorid, (e) => {
+        if (e) {
+          next(e);
+        } else {
+          // Success - go to author list
+          res.redirect('/catalog/authors');
+        }
+      });
     }
-
-    // Author has no books. Delete object and redirect to the list of authors.
-    Author.findByIdAndRemove(req.body.authorid, (err) => {
-      if (err) { return next(err); }
-      // Success - go to author list
-      res.redirect('/catalog/authors');
-    });
   });
 };
 
 // Display Author update form on GET
 exports.author_update_get = function (req, res, next) {
   Author.findById(req.params.id, (err, author) => {
-    if (err) { return next(err); }
-    if (author == null) { // No results.
-      var err = new Error('Author not found');
-      err.status = 404;
-      return next(err);
+    if (err) {
+      next(err);
+    } else if (author == null) { // No results.
+      const e = new Error('Author not found');
+      e.status = 404;
+      next(e);
+    } else {
+      // Success
+      res.render('author_form', { title: 'Update Author', author });
     }
-    // Success
-    res.render('author_form', { title: 'Update Author', author });
   });
 };
 
@@ -191,9 +208,12 @@ exports.author_update_post = [
     }
     // Data from form is valid. Update the record.
     Author.findByIdAndUpdate(req.params.id, author, {}, (err, theauthor) => {
-      if (err) { return next(err); }
-      // Successful - redirect to genre detail page.
-      res.redirect(theauthor.url);
+      if (err) {
+        next(err);
+      } else {
+        // Successful - redirect to genre detail page.
+        res.redirect(theauthor.url);
+      }
     });
   },
 ];
