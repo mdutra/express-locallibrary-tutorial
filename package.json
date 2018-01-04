@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node ./bin/www",
     "devstart": "nodemon ./bin/www",
-    "lint": "eslint app.js bin/www controllers/ models/ routes/"
+    "lint": "eslint app.js controllers/ models/ routes/"
   },
   "dependencies": {
     "async": "^2.6.0",
