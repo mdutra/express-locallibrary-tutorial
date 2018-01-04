@@ -2,6 +2,6 @@
     "extends": "airbnb-base",
     "rules": {
         "no-unused-vars": ["error", { "argsIgnorePattern": "^next$" }],
-        "no-console": ["error", { "allow": "error" }]
+        "no-console": ["error", { "allow": ["error"] }]
     }
 }
