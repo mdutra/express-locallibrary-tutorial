@@ -10,3 +10,19 @@ This web application creates an online catalog for a small local library, where 
 
 For more information see the associated [MDN tutorial home page](https://developer.mozilla.org/en-US/docs/Learn/Server-side/Express_Nodejs/Tutorial_local_library_website).
 
+## Installation
+
+Install dependencies
+```
+npm install
+```
+
+Get read-only database access
+```
+cp .env-template .env
+```
+
+Start server on `localhost:3000`
+```
+npm run devstart
+```
