@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const moment = require('moment'); // for date handling
 
-const Schema = mongoose.Schema;
+const { Schema } = mongoose;
 
 const AuthorSchema = new Schema({
   first_name: { type: String, required: true, max: 100 },
@@ -13,40 +13,40 @@ const AuthorSchema = new Schema({
 // Virtual for author "full" name
 AuthorSchema
   .virtual('name')
-  .get(function () {
+  .get(function getName() {
     return `${this.family_name}, ${this.first_name}`;
   });
 
 // Virtual for this author instance URL
 AuthorSchema
   .virtual('url')
-  .get(function () {
+  .get(function getURL() {
     return `/catalog/author/${this._id}`;
   });
 
 AuthorSchema
   .virtual('lifespan')
-  .get(function () {
-    let lifetime_string = '';
+  .get(function getLifespan() {
+    let lifetimeString = '';
     if (this.date_of_birth) {
-      lifetime_string = moment(this.date_of_birth).format('MMMM Do, YYYY');
+      lifetimeString = moment(this.date_of_birth).format('MMMM Do, YYYY');
     }
-    lifetime_string += ' - ';
+    lifetimeString += ' - ';
     if (this.date_of_death) {
-      lifetime_string += moment(this.date_of_death).format('MMMM Do, YYYY');
+      lifetimeString += moment(this.date_of_death).format('MMMM Do, YYYY');
     }
-    return lifetime_string;
+    return lifetimeString;
   });
 
 AuthorSchema
   .virtual('date_of_birth_yyyy_mm_dd')
-  .get(function () {
+  .get(function getDateOfBirth() {
     return moment(this.date_of_birth).format('YYYY-MM-DD');
   });
 
 AuthorSchema
   .virtual('date_of_death_yyyy_mm_dd')
-  .get(function () {
+  .get(function getDateOfDeath() {
     return moment(this.date_of_death).format('YYYY-MM-DD');
   });
 

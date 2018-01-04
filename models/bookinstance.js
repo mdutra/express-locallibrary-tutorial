@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const moment = require('moment');
 
-const Schema = mongoose.Schema;
+const { Schema } = mongoose;
 
 const BookInstanceSchema = new Schema({
   book: { type: Schema.ObjectId, ref: 'Book', required: true }, // reference to the associated book
@@ -15,20 +15,20 @@ const BookInstanceSchema = new Schema({
 // Virtual for this bookinstance object's URL
 BookInstanceSchema
   .virtual('url')
-  .get(function () {
+  .get(function getURL() {
     return `/catalog/bookinstance/${this._id}`;
   });
 
 
 BookInstanceSchema
   .virtual('due_back_formatted')
-  .get(function () {
+  .get(function getDueBackFormatted() {
     return moment(this.due_back).format('MMMM Do, YYYY');
   });
 
 BookInstanceSchema
   .virtual('due_back_yyyy_mm_dd')
-  .get(function () {
+  .get(function getDueBackYYYYMMDD() {
     return moment(this.due_back).format('YYYY-MM-DD');
   });
 
