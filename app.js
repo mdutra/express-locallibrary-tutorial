@@ -2,16 +2,18 @@ require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
-// const favicon = require('serve-favicon');
 const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const compression = require('compression');
+const helmet = require('helmet');
+// const favicon = require('serve-favicon');
 
 const index = require('./routes/index');
 const users = require('./routes/users');
 const catalog = require('./routes/catalog'); // Import routes for "catalog" area of site
-const compression = require('compression');
-const helmet = require('helmet');
+
 
 // Create the Express application object
 const app = express();
@@ -19,8 +21,6 @@ const app = express();
 app.use(helmet());
 
 // Set up mongoose connection
-const mongoose = require('mongoose');
-
 const devDbUrl = `mongodb://${process.env.DB_USER}:${process.env.DB_PASS}@ds161016.mlab.com:61016/local_library`;
 const mongoDB = process.env.MONGODB_URI || devDbUrl;
 mongoose.connect(mongoDB, {

@@ -1,14 +1,12 @@
 const express = require('express');
 
-const router = express.Router();
-
-
-// Require our controllers
 const bookController = require('../controllers/bookController');
 const authorController = require('../controllers/authorController');
 const genreController = require('../controllers/genreController');
 const bookInstanceController = require('../controllers/bookinstanceController');
 
+
+const router = express.Router();
 
 // / BOOK ROUTES ///
 
