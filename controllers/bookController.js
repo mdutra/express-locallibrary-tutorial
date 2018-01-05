@@ -41,11 +41,11 @@ module.exports = {
       // The next two properties should be used together
       names: ['Books', 'Copies', 'Copies available', 'Authors', 'Genres'],
       counts: await Promise.all([
-        Book.count(),
-        BookInstance.count(),
-        BookInstance.count({ status: 'Available' }),
-        Author.count(),
-        Genre.count(),
+        Book.count().exec(),
+        BookInstance.count().exec(),
+        BookInstance.count({ status: 'Available' }).exec(),
+        Author.count().exec(),
+        Genre.count().exec(),
       ]),
     });
   }),
