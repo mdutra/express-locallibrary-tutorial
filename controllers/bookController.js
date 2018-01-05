@@ -102,7 +102,7 @@ module.exports = {
     },
 
     // Validate fields
-    body('title', 'Title must not be empty.').isLength({ min: 100 }).trim(),
+    body('title', 'Title must not be empty.').isLength({ min: 1 }).trim(),
     body('author', 'Author must not be empty.').isLength({ min: 1 }).trim(),
     body('summary', 'Summary must not be empty.').isLength({ min: 1 }).trim(),
     body('isbn', 'ISBN must not be empty').isLength({ min: 1 }).trim(),
