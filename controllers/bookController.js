@@ -2,6 +2,8 @@ const async = require('async');
 const { body, validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
 
+const { handleError } = require('../utils');
+
 const Book = require('../models/book');
 const Author = require('../models/author');
 const Genre = require('../models/genre');
@@ -33,27 +35,20 @@ const validateForm = [
 ];
 
 module.exports = {
-  index(req, res) {
-    async.parallel({
-      book_count(callback) {
-        Book.count(callback);
-      },
-      book_instance_count(callback) {
-        BookInstance.count(callback);
-      },
-      book_instance_available_count(callback) {
-        BookInstance.count({ status: 'Available' }, callback);
-      },
-      author_count(callback) {
-        Author.count(callback);
-      },
-      genre_count(callback) {
-        Genre.count(callback);
-      },
-    }, (err, results) => {
-      res.render('index', { title: 'Local Library Home', error: err, data: results });
+  index: handleError(async (req, res) => {
+    res.render('index', {
+      title: 'Local Library Home',
+      // The next two properties should be used together
+      names: ['Books', 'Copies', 'Copies available', 'Authors', 'Genres'],
+      counts: await Promise.all([
+        Book.count(),
+        BookInstance.count(),
+        BookInstance.count({ status: 'Available' }),
+        Author.count(),
+        Genre.count(),
+      ]),
     });
-  },
+  }),
 
   // Display list of all books
   book_list(req, res, next) {
