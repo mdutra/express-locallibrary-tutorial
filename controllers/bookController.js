@@ -8,6 +8,30 @@ const Genre = require('../models/genre');
 const BookInstance = require('../models/bookinstance');
 
 
+const validateForm = [
+  // Convert the genre to an array
+  (req, res, next) => {
+    if (!(req.body.genre instanceof Array)) {
+      if (typeof req.body.genre === 'undefined') {
+        req.body.genre = [];
+      } else {
+        req.body.genre = new Array(req.body.genre);
+      }
+    }
+    next();
+  },
+
+  // Validate fields
+  body('title', 'Title must not be empty.').isLength({ min: 1 }).trim(),
+  body('author', 'Author must not be empty.').isLength({ min: 1 }).trim(),
+  body('summary', 'Summary must not be empty.').isLength({ min: 1 }).trim(),
+  body('isbn', 'ISBN must not be empty').isLength({ min: 1 }).trim(),
+
+  // Sanitize fields
+  sanitizeBody('*').trim().escape(),
+  sanitizeBody('genre.*').trim().escape(),
+];
+
 module.exports = {
   index(req, res) {
     async.parallel({
@@ -92,24 +116,7 @@ module.exports = {
   },
 
   // Handle book create on POST
-  book_create_post: [
-    // Convert the genre to an array
-    (req, res, next) => {
-      if (!(req.body.genre instanceof Array)) {
-        if (typeof req.body.genre === 'undefined') { req.body.genre = []; } else { req.body.genre = new Array(req.body.genre); }
-      }
-      next();
-    },
-
-    // Validate fields
-    body('title', 'Title must not be empty.').isLength({ min: 1 }).trim(),
-    body('author', 'Author must not be empty.').isLength({ min: 1 }).trim(),
-    body('summary', 'Summary must not be empty.').isLength({ min: 1 }).trim(),
-    body('isbn', 'ISBN must not be empty').isLength({ min: 1 }).trim(),
-
-    // Sanitize fields
-    sanitizeBody('*').trim().escape(),
-    sanitizeBody('genre.*').trim().escape(),
+  book_create_post: validateForm.concat([
     // Process request after validation and sanitization
     (req, res, next) => {
       // Extract the validation errors from a request
@@ -163,7 +170,7 @@ module.exports = {
         }
       });
     },
-  ],
+  ]),
 
   // Display book delete form on GET
   book_delete_get(req, res, next) {
@@ -255,29 +262,7 @@ module.exports = {
   },
 
   // Handle book update on POST
-  book_update_post: [
-
-    // Convert the genre to an array
-    (req, res, next) => {
-      if (!(req.body.genre instanceof Array)) {
-        if (typeof req.body.genre === 'undefined') { req.body.genre = []; } else { req.body.genre = new Array(req.body.genre); }
-      }
-      next();
-    },
-
-    // Validate fields
-    body('title', 'Title must not be empty.').isLength({ min: 1 }).trim(),
-    body('author', 'Author must not be empty.').isLength({ min: 1 }).trim(),
-    body('summary', 'Summary must not be empty.').isLength({ min: 1 }).trim(),
-    body('isbn', 'ISBN must not be empty').isLength({ min: 1 }).trim(),
-
-    // Sanitize fields
-    sanitizeBody('title').trim().escape(),
-    sanitizeBody('author').trim().escape(),
-    sanitizeBody('summary').trim().escape(),
-    sanitizeBody('isbn').trim().escape(),
-    sanitizeBody('genre.*').trim().escape(),
-
+  book_update_post: validateForm.concat([
     // Process request after validation and sanitization
     (req, res, next) => {
       // Extract the validation errors from a request
@@ -332,5 +317,5 @@ module.exports = {
         });
       }
     },
-  ],
+  ]),
 };
