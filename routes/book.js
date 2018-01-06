@@ -12,7 +12,7 @@ const Genre = require('../models/genre');
 
 
 // Get checkbox and drop down option names
-const getFormNames = handleError(async (req, res, next) => {
+const listOptions = handleError(async (req, res, next) => {
   const [authors, genres] = await Promise.all([Author.find().exec(), Genre.find().exec()]);
 
   res.locals.authors = authors;
@@ -61,7 +61,7 @@ function markCheckboxes(req, res, next) {
 
 router.route('/create')
   .get(
-    getFormNames,
+    listOptions,
 
     (req, res) => {
       res.render('book_form', { title: 'Create Book' });
@@ -85,7 +85,7 @@ router.route('/create')
       }
     }),
 
-    getFormNames,
+    listOptions,
 
     markCheckboxes,
 
@@ -110,7 +110,7 @@ router.route('/:_id/update')
       next();
     }),
 
-    getFormNames,
+    listOptions,
 
     markCheckboxes,
 
@@ -137,7 +137,7 @@ router.route('/:_id/update')
       }
     }),
 
-    getFormNames,
+    listOptions,
 
     markCheckboxes,
 
