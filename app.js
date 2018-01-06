@@ -11,7 +11,6 @@ const helmet = require('helmet');
 // const favicon = require('serve-favicon');
 
 const index = require('./routes/index');
-const users = require('./routes/users');
 const book = require('./routes/book');
 const genre = require('./routes/genre');
 const author = require('./routes/author');
@@ -50,7 +49,6 @@ app.use(compression()); // Compress all routes
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', index);
-app.use('/users', users);
 app.use('/book', book);
 app.use('/genre', genre);
 app.use('/author', author);
