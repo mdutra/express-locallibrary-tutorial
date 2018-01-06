@@ -3,11 +3,23 @@ const async = require('async');
 const { body, validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
 
+const { handleError } = require('../utils');
+
 const Author = require('../models/author');
-const Book = require('../models/author');
+const Book = require('../models/book');
 const BookInstance = require('../models/bookinstance');
 const Genre = require('../models/genre');
 
+
+// Get checkbox and drop down option names
+const getFormNames = handleError(async (req, res, next) => {
+  const [authors, genres] = await Promise.all([Author.find().exec(), Genre.find().exec()]);
+
+  res.locals.authors = authors;
+  res.locals.genres = genres;
+
+  next();
+});
 
 const validateForm = [
   // Convert the genre to an array
@@ -33,79 +45,104 @@ const validateForm = [
   sanitizeBody('genre.*').trim().escape(),
 ];
 
+// Mark selected genres as checked if that's the case
+function markCheckboxes(req, res, next) {
+  const selected = res.locals.book.genre;
+  const { genres } = res.locals;
+
+  for (let i = 0; i < genres.length; i += 1) {
+    if (selected.indexOf(genres[i]._id) > -1) {
+      genres[i].checked = 'true';
+    }
+  }
+
+  next();
+}
+
 router.route('/create')
-  .get((req, res, next) => {
-    // Get all authors and genres, which we can use for adding to our book.
-    async.parallel({
-      authors(callback) {
-        Author.find(callback);
-      },
-      genres(callback) {
-        Genre.find(callback);
-      },
-    }, (err, results) => {
-      if (err) {
-        next(err);
-      } else {
-        res.render('book_form', { title: 'Create Book', authors: results.authors, genres: results.genres });
-      }
-    });
-  })
+  .get(
+    getFormNames,
+
+    (req, res) => {
+      res.render('book_form', { title: 'Create Book' });
+    },
+  )
   .post(
     validateForm,
 
-    // Process request after validation and sanitization
-    (req, res, next) => {
-      // Extract the validation errors from a request
-      const errors = validationResult(req);
+    handleError(async (req, res, next) => {
+      const book = new Book(req.body);
+      const err = validationResult(req);
 
-      // Create a Book object with escaped and trimmed data.
-      const book = new Book({
-        title: req.body.title,
-        author: req.body.author,
-        summary: req.body.summary,
-        isbn: req.body.isbn,
-        genre: req.body.genre,
-      });
+      if (err.isEmpty()) {
+        res.redirect((await book.save()).url);
+      } else {
+        // Render the page again
+        res.locals.book = book;
+        res.locals.errors = err.array();
 
-      if (!errors.isEmpty()) {
-        // There are errors. Render form again with sanitized values/error messages.
-
-        // Get all authors and genres for form
-        async.parallel({
-          authors(callback) {
-            Author.find(callback);
-          },
-          genres(callback) {
-            Genre.find(callback);
-          },
-        }, (err, results) => {
-          if (err) {
-            next(err);
-          } else {
-            // Mark our selected genres as checked
-            for (let i = 0; i < results.genres.length; i += 1) {
-              if (book.genre.indexOf(results.genres[i]._id) > -1) {
-                results.genres[i].checked = 'true';
-              }
-            }
-
-            res.render('book_form', {
-              title: 'Create Book', authors: results.authors, genres: results.genres, book, errors: errors.array(),
-            });
-          }
-        });
-        return;
+        next();
       }
-      // Data from form is valid. Save book.
-      book.save((err) => {
-        if (err) {
-          next(err);
-        } else {
-          // successful - redirect to new book record.
-          res.redirect(book.url);
-        }
-      });
+    }),
+
+    getFormNames,
+
+    markCheckboxes,
+
+    (req, res, next) => {
+      res.render('book_form', { title: 'Create Book' });
+    },
+  );
+
+router.route('/:_id/update')
+  .get(
+    handleError(async (req, res, next) => {
+      const book = await Book.findById(req.params._id);
+
+      if (book === null) {
+        const err = new Error('Book not found');
+        err.status = 404;
+        throw err;
+      }
+
+      res.locals.book = book;
+
+      next();
+    }),
+
+    getFormNames,
+
+    markCheckboxes,
+
+    (req, res) => {
+      res.render('book_form', { title: 'Update Book' });
+    },
+  )
+  .post(
+    validateForm,
+
+    handleError(async (req, res, next) => {
+      const book = new Book(Object.assign(req.body, req.params));
+      const err = validationResult(req);
+
+      if (err.isEmpty()) {
+        res.redirect((await Book.findByIdAndUpdate(req.params._id, book)).url);
+      } else {
+        // Render the page again
+        res.locals.book = book;
+        res.locals.errors = err.mapped();
+        res.locals.title = 'Update Book';
+
+        next();
+      }
+    }),
+
+    getFormNames,
+
+    markCheckboxes,
+
+    (req, res, next) => {
+      res.render('book_form', { title: 'Update Book' });
     },
   );
 
@@ -157,101 +194,6 @@ router.route('/:id/delete')
       }
     });
   });
-
-router.route('/:id/update')
-  .get((req, res, next) => {
-    // Get book, authors and genres for form.
-    async.parallel({
-      book(callback) {
-        Book.findById(req.params.id).populate('author').populate('genre').exec(callback);
-      },
-      authors(callback) {
-        Author.find(callback);
-      },
-      genres(callback) {
-        Genre.find(callback);
-      },
-    }, (err, results) => {
-      if (err) {
-        next(err);
-      } else if (results.book == null) { // No results.
-        const e = new Error('Book not found');
-        e.status = 404;
-        next(e);
-      } else {
-        // Mark our selected genres as checked
-        for (let i = 0; i < results.genres.length; i += 1) {
-          for (let j = 0; j < results.book.genre.length; j += 1) {
-            if (results.genres[i]._id.toString() === results.book.genre[j]._id.toString()) {
-              results.genres[i].checked = 'true';
-            }
-          }
-        }
-
-        res.render('book_form', {
-          title: 'Update Book', authors: results.authors, genres: results.genres, book: results.book,
-        });
-      }
-    });
-  })
-  .post(
-    validateForm,
-
-    // Process request after validation and sanitization
-    (req, res, next) => {
-      // Extract the validation errors from a request
-      const errors = validationResult(req);
-
-      // Create a Book object with escaped/trimmed data and old id.
-      const book = new Book({
-        title: req.body.title,
-        author: req.body.author,
-        summary: req.body.summary,
-        isbn: req.body.isbn,
-        genre: (typeof req.body.genre === 'undefined') ? [] : req.body.genre,
-        _id: req.params.id, // This is required, or a new ID will be assigned!
-      });
-
-      if (!errors.isEmpty()) {
-        // There are errors. Render form again with sanitized values/error messages.
-
-        // Get all authors and genres for form
-        async.parallel({
-          authors(callback) {
-            Author.find(callback);
-          },
-          genres(callback) {
-            Genre.find(callback);
-          },
-        }, (err, results) => {
-          if (err) {
-            next(err);
-          } else {
-            // Mark our selected genres as checked
-            for (let i = 0; i < results.genres.length; i += 1) {
-              if (book.genre.indexOf(results.genres[i]._id) > -1) {
-                results.genres[i].checked = 'true';
-              }
-            }
-
-            res.render('book_form', {
-              title: 'Update Book', authors: results.authors, genres: results.genres, book, errors: errors.array(),
-            });
-          }
-        });
-      } else {
-        // Data from form is valid. Update the record.
-        Book.findByIdAndUpdate(req.params.id, book, {}, (err, thebook) => {
-          if (err) {
-            next(err);
-          } else {
-            // Successful - redirect to book detail page.
-            res.redirect(thebook.url);
-          }
-        });
-      }
-    },
-  );
 
 // NOTE: This must go after /create
 router.route('/:id')
