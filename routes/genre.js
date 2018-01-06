@@ -1,3 +1,4 @@
+const router = require('express').Router();
 const async = require('async');
 const { body, validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
@@ -5,56 +6,11 @@ const { sanitizeBody } = require('express-validator/filter');
 const Genre = require('../models/genre');
 const Book = require('../models/book');
 
-
-module.exports = {
-  genre_list(req, res, next) {
-    Genre.find()
-      .sort([['name', 'ascending']])
-      .exec((err, listGenres) => {
-        if (err) {
-          next(err);
-        } else {
-          // Successful, so render.
-          res.render('genre_list', { title: 'Genre List', listGenres });
-        }
-      });
-  },
-
-  // Display detail page for a specific Genre
-  genre_detail(req, res, next) {
-    async.parallel({
-      genre(callback) {
-        Genre.findById(req.params.id)
-          .exec(callback);
-      },
-
-      genre_books(callback) {
-        Book.find({ genre: req.params.id })
-          .exec(callback);
-      },
-
-    }, (err, results) => {
-      if (err) {
-        next(err);
-      } else if (results.genre == null) { // No results.
-        const e = new Error('Genre not found');
-        e.status = 404;
-        next(e);
-      } else {
-        // Successful, so render.
-        res.render('genre_detail', { title: 'Genre Detail', genre: results.genre, genre_books: results.genre_books });
-      }
-    });
-  },
-
-  // Display Genre create form on GET
-  genre_create_get(req, res, next) {
+router.route('/create')
+  .get((req, res, next) => {
     res.render('genre_form', { title: 'Create Genre' });
-  },
-
-  // Handle Genre create on POST
-  genre_create_post: [
-
+  })
+  .post(
     // Validate that the name field is not empty.
     body('name', 'Genre name required').isLength({ min: 1 }).trim(),
 
@@ -96,10 +52,10 @@ module.exports = {
           }
         });
     },
-  ],
+  );
 
-  // Display Genre delete form on GET
-  genre_delete_get(req, res, next) {
+router.route('/:id/delete')
+  .get((req, res, next) => {
     async.parallel({
       genre(callback) {
         Genre.findById(req.params.id).exec(callback);
@@ -117,10 +73,8 @@ module.exports = {
         res.render('genre_delete', { title: 'Delete Genre', genre: results.genre, genre_books: results.genre_books });
       }
     });
-  },
-
-  // Handle Genre delete on POST
-  genre_delete_post(req, res, next) {
+  })
+  .post((req, res, next) => {
     async.parallel({
       genre(callback) {
         Genre.findById(req.params.id).exec(callback);
@@ -146,10 +100,10 @@ module.exports = {
         });
       }
     });
-  },
+  });
 
-  // Display Genre update form on GET
-  genre_update_get(req, res, next) {
+router.route('/:id/update')
+  .get((req, res, next) => {
     Genre.findById(req.params.id, (err, genre) => {
       if (err) {
         next(err);
@@ -162,11 +116,8 @@ module.exports = {
         res.render('genre_form', { title: 'Update Genre', genre });
       }
     });
-  },
-
-  // Handle Genre update on POST
-  genre_update_post: [
-
+  })
+  .post(
     // Validate that the name field is not empty.
     body('name', 'Genre name required').isLength({ min: 1 }).trim(),
 
@@ -200,5 +151,35 @@ module.exports = {
         });
       }
     },
-  ],
-};
+  );
+
+// NOTE: This must go after route /create
+router.route('/:id')
+  .get((req, res, next) => {
+    async.parallel({
+      genre(callback) {
+        Genre.findById(req.params.id)
+          .exec(callback);
+      },
+
+      genre_books(callback) {
+        Book.find({ genre: req.params.id })
+          .exec(callback);
+      },
+
+    }, (err, results) => {
+      if (err) {
+        next(err);
+      } else if (results.genre == null) { // No results.
+        const e = new Error('Genre not found');
+        e.status = 404;
+        next(e);
+      } else {
+        // Successful, so render.
+        res.render('genre_detail', { title: 'Genre Detail', genre: results.genre, genre_books: results.genre_books });
+      }
+    });
+  });
+
+
+module.exports = router;

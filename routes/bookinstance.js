@@ -1,46 +1,14 @@
+const router = require('express').Router();
 const async = require('async');
 const { body, validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
 
-const BookInstance = require('../models/bookinstance');
 const Book = require('../models/book');
+const BookInstance = require('../models/bookinstance');
 
 
-module.exports = {
-  // Display list of all BookInstances
-  bookinstance_list(req, res, next) {
-    BookInstance.find()
-      .populate('book')
-      .exec((err, listBookinstances) => {
-        if (err) {
-          next(err);
-        } else {
-          // Successful, so render.
-          res.render('bookinstance_list', { title: 'Book Instance List', bookinstance_list: listBookinstances });
-        }
-      });
-  },
-
-  // Display detail page for a specific BookInstance
-  bookinstance_detail(req, res, next) {
-    BookInstance.findById(req.params.id)
-      .populate('book')
-      .exec((err, bookinstance) => {
-        if (err) {
-          next(err);
-        } else if (bookinstance == null) { // No results.
-          const e = new Error('Book copy not found');
-          e.status = 404;
-          next(e);
-        } else {
-          // Successful, so render.
-          res.render('bookinstance_detail', { title: 'Book:', bookinstance });
-        }
-      });
-  },
-
-  // Display BookInstance create form on GET
-  bookinstance_create_get(req, res, next) {
+router.route('/bookinstance/create')
+  .get((req, res, next) => {
     Book.find({}, 'title')
       .exec((err, books) => {
         if (err) {
@@ -50,11 +18,8 @@ module.exports = {
           res.render('bookinstance_form', { title: 'Create BookInstance', book_list: books });
         }
       });
-  },
-
-  // Handle BookInstance create on POST
-  bookinstance_create_post: [
-
+  })
+  .post(
     // Validate fields
     body('book', 'Book must be specified').isLength({ min: 1 }).trim(),
     body('imprint', 'Imprint must be specified').isLength({ min: 1 }).trim(),
@@ -104,11 +69,10 @@ module.exports = {
         });
       }
     },
-  ],
+  );
 
-
-  // Display BookInstance delete form on GET
-  bookinstance_delete_get(req, res, next) {
+router.route('/bookinstance/:id/delete')
+  .get((req, res, next) => {
     BookInstance.findById(req.params.id)
       .populate('book')
       .exec((err, bookinstance) => {
@@ -121,10 +85,8 @@ module.exports = {
           res.render('bookinstance_delete', { title: 'Delete BookInstance', bookinstance });
         }
       });
-  },
-
-  // Handle BookInstance delete on POST
-  bookinstance_delete_post(req, res, next) {
+  })
+  .post((req, res, next) => {
     // Assume valid BookInstance id in field.
     BookInstance.findByIdAndRemove(req.body.id, (err) => {
       if (err) {
@@ -134,10 +96,10 @@ module.exports = {
         res.redirect('/catalog/bookinstances');
       }
     });
-  },
+  });
 
-  // Display BookInstance update form on GET
-  bookinstance_update_get(req, res, next) {
+router.route('/bookinstance/:id/update')
+  .get((req, res, next) => {
     // Get book, authors and genres for form.
     async.parallel({
       bookinstance(callback) {
@@ -161,11 +123,8 @@ module.exports = {
         });
       }
     });
-  },
-
-  // Handle BookInstance update on POST
-  bookinstance_update_post: [
-
+  })
+  .post(
     // Validate fields
     body('book', 'Book must be specified').isLength({ min: 1 }).trim(),
     body('imprint', 'Imprint must be specified').isLength({ min: 1 }).trim(),
@@ -216,5 +175,26 @@ module.exports = {
         }
       });
     },
-  ],
-};
+  );
+
+// NOTE: This must go after route /create
+router.route('/bookinstance/:id')
+  .get((req, res, next) => {
+    BookInstance.findById(req.params.id)
+      .populate('book')
+      .exec((err, bookinstance) => {
+        if (err) {
+          next(err);
+        } else if (bookinstance == null) { // No results.
+          const e = new Error('Book copy not found');
+          e.status = 404;
+          next(e);
+        } else {
+          // Successful, so render.
+          res.render('bookinstance_detail', { title: 'Book:', bookinstance });
+        }
+      });
+  });
+
+
+module.exports = router;

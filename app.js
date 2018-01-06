@@ -13,6 +13,10 @@ const helmet = require('helmet');
 const index = require('./routes/index');
 const users = require('./routes/users');
 const catalog = require('./routes/catalog'); // Import routes for "catalog" area of site
+const book = require('./routes/book');
+const genre = require('./routes/genre');
+const author = require('./routes/author');
+const bookinstance = require('./routes/bookinstance');
 
 
 // Create the Express application object
@@ -49,6 +53,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', index);
 app.use('/users', users);
 app.use('/catalog', catalog); // Add catalog routes to middleware chain.
+app.use('/catalog/book', book);
+app.use('/catalog/genre', genre);
+app.use('/catalog/author', author);
+app.use('/catalog/bookinstance', bookinstance);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

@@ -1,13 +1,12 @@
+const router = require('express').Router();
 const async = require('async');
 const { body, validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
 
-const { handleError } = require('../utils');
-
-const Book = require('../models/book');
 const Author = require('../models/author');
-const Genre = require('../models/genre');
+const Book = require('../models/author');
 const BookInstance = require('../models/bookinstance');
+const Genre = require('../models/genre');
 
 
 const validateForm = [
@@ -34,65 +33,8 @@ const validateForm = [
   sanitizeBody('genre.*').trim().escape(),
 ];
 
-module.exports = {
-  index: handleError(async (req, res) => {
-    res.render('index', {
-      title: 'Local Library Home',
-      // The next two properties should be used together
-      names: ['Books', 'Copies', 'Copies available', 'Authors', 'Genres'],
-      counts: await Promise.all([
-        Book.count().exec(),
-        BookInstance.count().exec(),
-        BookInstance.count({ status: 'Available' }).exec(),
-        Author.count().exec(),
-        Genre.count().exec(),
-      ]),
-    });
-  }),
-
-  // Display list of all books
-  book_list(req, res, next) {
-    Book.find({}, 'title author ')
-      .populate('author')
-      .exec((err, listBooks) => {
-        if (err) {
-          next(err);
-        } else {
-          // Successful, so render
-          res.render('book_list', { title: 'Book List', book_list: listBooks });
-        }
-      });
-  },
-
-  // Display detail page for a specific book
-  book_detail(req, res, next) {
-    async.parallel({
-      book(callback) {
-        Book.findById(req.params.id)
-          .populate('author')
-          .populate('genre')
-          .exec(callback);
-      },
-      book_instance(callback) {
-        BookInstance.find({ book: req.params.id })
-          .exec(callback);
-      },
-    }, (err, results) => {
-      if (err) {
-        next(err);
-      } else if (results.book == null) { // No results.
-        const e = new Error('Book not found');
-        e.status = 404;
-        next(e);
-      } else {
-        // Successful, so render.
-        res.render('book_detail', { title: 'Title', book: results.book, book_instances: results.book_instance });
-      }
-    });
-  },
-
-  // Display book create form on GET
-  book_create_get(req, res, next) {
+router.route('/create')
+  .get((req, res, next) => {
     // Get all authors and genres, which we can use for adding to our book.
     async.parallel({
       authors(callback) {
@@ -108,10 +50,10 @@ module.exports = {
         res.render('book_form', { title: 'Create Book', authors: results.authors, genres: results.genres });
       }
     });
-  },
+  })
+  .post(
+    validateForm,
 
-  // Handle book create on POST
-  book_create_post: validateForm.concat([
     // Process request after validation and sanitization
     (req, res, next) => {
       // Extract the validation errors from a request
@@ -165,10 +107,10 @@ module.exports = {
         }
       });
     },
-  ]),
+  );
 
-  // Display book delete form on GET
-  book_delete_get(req, res, next) {
+router.route('/:id/delete')
+  .get((req, res, next) => {
     async.parallel({
       book(callback) {
         Book.findById(req.params.id).populate('author').populate('genre').exec(callback);
@@ -186,12 +128,9 @@ module.exports = {
         res.render('book_delete', { title: 'Delete Book', book: results.book, book_instances: results.book_bookinstances });
       }
     });
-  },
-
-  // Handle book delete on POST
-  book_delete_post(req, res, next) {
+  })
+  .post((req, res, next) => {
     // Assume the post has valid id (ie no validation/sanitization).
-
     async.parallel({
       book(callback) {
         Book.findById(req.params.id).populate('author').populate('genre').exec(callback);
@@ -217,10 +156,10 @@ module.exports = {
         });
       }
     });
-  },
+  });
 
-  // Display book update form on GET.
-  book_update_get(req, res, next) {
+router.route('/:id/update')
+  .get((req, res, next) => {
     // Get book, authors and genres for form.
     async.parallel({
       book(callback) {
@@ -254,10 +193,10 @@ module.exports = {
         });
       }
     });
-  },
+  })
+  .post(
+    validateForm,
 
-  // Handle book update on POST
-  book_update_post: validateForm.concat([
     // Process request after validation and sanitization
     (req, res, next) => {
       // Extract the validation errors from a request
@@ -312,5 +251,35 @@ module.exports = {
         });
       }
     },
-  ]),
-};
+  );
+
+// NOTE: This must go after /create
+router.route('/:id')
+  .get((req, res, next) => {
+    async.parallel({
+      book(callback) {
+        Book.findById(req.params.id)
+          .populate('author')
+          .populate('genre')
+          .exec(callback);
+      },
+      book_instance(callback) {
+        BookInstance.find({ book: req.params.id })
+          .exec(callback);
+      },
+    }, (err, results) => {
+      if (err) {
+        next(err);
+      } else if (results.book == null) { // No results.
+        const e = new Error('Book not found');
+        e.status = 404;
+        next(e);
+      } else {
+        // Successful, so render.
+        res.render('book_detail', { title: 'Title', book: results.book, book_instances: results.book_instance });
+      }
+    });
+  });
+
+
+module.exports = router;

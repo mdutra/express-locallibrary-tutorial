@@ -1,3 +1,4 @@
+const router = require('express').Router();
 const async = require('async');
 const { body, validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
@@ -6,55 +7,11 @@ const Author = require('../models/author');
 const Book = require('../models/book');
 
 
-module.exports = {
-  // Display list of all Authors
-  author_list(req, res, next) {
-    Author.find()
-      .sort([['family_name', 'ascending']])
-      .exec((err, listAuthors) => {
-        if (err) {
-          next(err);
-        } else {
-        // Successful, so render
-          res.render('author_list', { title: 'Author List', author_list: listAuthors });
-        }
-      });
-  },
-
-  // Display detail page for a specific Author
-  author_detail(req, res, next) {
-    async.parallel({
-      author(callback) {
-        Author.findById(req.params.id)
-          .exec(callback);
-      },
-      authors_books(callback) {
-        Book.find({ author: req.params.id }, 'title summary')
-          .exec(callback);
-      },
-    }, (err, results) => {
-      // Error in API usage.
-      if (err) {
-        next(err);
-      } else if (results.author == null) { // No results.
-        const e = new Error('Author not found');
-        e.status = 404;
-        next(e);
-      } else {
-        // Successful, so render.
-        res.render('author_detail', { title: 'Author Detail', author: results.author, author_books: results.authors_books });
-      }
-    });
-  },
-
-  // Display Author create form on GET
-  author_create_get(req, res, next) {
+router.route('/create')
+  .get((req, res, next) => {
     res.render('author_form', { title: 'Create Author' });
-  },
-
-  // Handle Author create on POST
-  author_create_post: [
-
+  })
+  .post(
     // Validate fields
     body('first_name').isLength({ min: 1 }).trim().withMessage('First name must be specified.')
       .isAlphanumeric()
@@ -99,11 +56,10 @@ module.exports = {
         }
       });
     },
-  ],
+  );
 
-
-  // Display Author delete form on GET
-  author_delete_get(req, res, next) {
+router.route('/:id/delete')
+  .get((req, res, next) => {
     async.parallel({
       author(callback) {
         Author.findById(req.params.id).exec(callback);
@@ -121,10 +77,8 @@ module.exports = {
         res.render('author_delete', { title: 'Delete Author', author: results.author, author_books: results.authors_books });
       }
     });
-  },
-
-  // Handle Author delete on POST
-  author_delete_post(req, res, next) {
+  })
+  .post((req, res, next) => {
     async.parallel({
       author(callback) {
         Author.findById(req.body.authorid).exec(callback);
@@ -152,10 +106,10 @@ module.exports = {
         });
       }
     });
-  },
+  });
 
-  // Display Author update form on GET
-  author_update_get(req, res, next) {
+router.route('/:id/update')
+  .get((req, res, next) => {
     Author.findById(req.params.id, (err, author) => {
       if (err) {
         next(err);
@@ -168,11 +122,8 @@ module.exports = {
         res.render('author_form', { title: 'Update Author', author });
       }
     });
-  },
-
-  // Handle Author update on POST
-  author_update_post: [
-
+  })
+  .post(
     // Validate fields
     body('first_name').isLength({ min: 1 }).trim().withMessage('First name must be specified.')
       .isAlphanumeric()
@@ -218,5 +169,34 @@ module.exports = {
         }
       });
     },
-  ],
-};
+  );
+
+// NOTE: This must go after route /create
+router.route('/:id')
+  .get((req, res, next) => {
+    async.parallel({
+      author(callback) {
+        Author.findById(req.params.id)
+          .exec(callback);
+      },
+      authors_books(callback) {
+        Book.find({ author: req.params.id }, 'title summary')
+          .exec(callback);
+      },
+    }, (err, results) => {
+      // Error in API usage.
+      if (err) {
+        next(err);
+      } else if (results.author == null) { // No results.
+        const e = new Error('Author not found');
+        e.status = 404;
+        next(e);
+      } else {
+        // Successful, so render.
+        res.render('author_detail', { title: 'Author Detail', author: results.author, author_books: results.authors_books });
+      }
+    });
+  });
+
+
+module.exports = router;
