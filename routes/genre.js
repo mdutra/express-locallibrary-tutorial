@@ -67,7 +67,7 @@ router.route('/:id/delete')
       if (err) {
         next(err);
       } else if (results.genre == null) { // No results.
-        res.redirect('/catalog/genres');
+        res.redirect('/genres');
       } else {
         // Successful, so render.
         res.render('genre_delete', { title: 'Delete Genre', genre: results.genre, genre_books: results.genre_books });
@@ -95,7 +95,7 @@ router.route('/:id/delete')
             next(e);
           } else {
             // Success - go to genres list.
-            res.redirect('/catalog/genres');
+            res.redirect('/genres');
           }
         });
       }

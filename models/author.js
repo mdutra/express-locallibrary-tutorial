@@ -22,7 +22,7 @@ AuthorSchema
 AuthorSchema
   .virtual('url')
   .get(function getURL() {
-    return `/catalog/author/${this._id}`;
+    return `/author/${this._id}`;
   });
 
 AuthorSchema

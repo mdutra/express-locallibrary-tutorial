@@ -122,7 +122,7 @@ router.route('/:id/delete')
       if (err) {
         next(err);
       } else if (results.book == null) { // No results.
-        res.redirect('/catalog/books');
+        res.redirect('/books');
       } else {
         // Successful, so render
         res.render('book_delete', { title: 'Delete Book', book: results.book, book_instances: results.book_bookinstances });
@@ -151,7 +151,7 @@ router.route('/:id/delete')
             next(e);
           } else {
             // Success - got to books list
-            res.redirect('/catalog/books');
+            res.redirect('/books');
           }
         });
       }
