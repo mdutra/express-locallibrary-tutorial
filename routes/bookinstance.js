@@ -7,7 +7,7 @@ const Book = require('../models/book');
 const BookInstance = require('../models/bookinstance');
 
 
-router.route('/bookinstance/create')
+router.route('/create')
   .get((req, res, next) => {
     Book.find({}, 'title')
       .exec((err, books) => {
@@ -71,7 +71,7 @@ router.route('/bookinstance/create')
     },
   );
 
-router.route('/bookinstance/:id/delete')
+router.route('/:id/delete')
   .get((req, res, next) => {
     BookInstance.findById(req.params.id)
       .populate('book')
@@ -79,7 +79,7 @@ router.route('/bookinstance/:id/delete')
         if (err) {
           next(err);
         } else if (bookinstance == null) { // No results.
-          res.redirect('/catalog/bookinstances');
+          res.redirect('/bookinstances');
         } else {
           // Successful, so render.
           res.render('bookinstance_delete', { title: 'Delete BookInstance', bookinstance });
@@ -93,12 +93,12 @@ router.route('/bookinstance/:id/delete')
         next(err);
       } else {
         // Success, so redirect to list of BookInstance items.
-        res.redirect('/catalog/bookinstances');
+        res.redirect('/bookinstances');
       }
     });
   });
 
-router.route('/bookinstance/:id/update')
+router.route('/:id/update')
   .get((req, res, next) => {
     // Get book, authors and genres for form.
     async.parallel({
@@ -178,7 +178,7 @@ router.route('/bookinstance/:id/update')
   );
 
 // NOTE: This must go after route /create
-router.route('/bookinstance/:id')
+router.route('/:id')
   .get((req, res, next) => {
     BookInstance.findById(req.params.id)
       .populate('book')
