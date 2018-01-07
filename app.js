@@ -63,11 +63,12 @@ app.use((req, res, next) => {
 
 app.use((err, req, res, next) => {
   if (err instanceof mongoose.CastError) {
-    err.message = `${err.stringValue} is an invalid ID`;
-    err.status = 422;
+    const e = new Error('Invalid request');
+    e.status = 422;
+    next(e);
+  } else {
+    next(err);
   }
-
-  next(err);
 });
 
 app.use((err, req, res, next) => {

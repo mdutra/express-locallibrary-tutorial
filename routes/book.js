@@ -1,5 +1,4 @@
 const router = require('express').Router();
-const async = require('async');
 const { body, validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
 
@@ -189,7 +188,7 @@ router.route('/:id')
       throw err;
     }
 
-    res.render('book_detail', { title: 'Title', book, bookInstances } );
+    res.render('book_detail', { title: 'Title', book, bookInstances });
   }));
 
 
