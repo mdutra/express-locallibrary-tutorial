@@ -177,31 +177,20 @@ router.route('/:id/delete')
 
 // NOTE: This must go after /create
 router.route('/:id')
-  .get((req, res, next) => {
-    async.parallel({
-      book(callback) {
-        Book.findById(req.params.id)
-          .populate('author')
-          .populate('genre')
-          .exec(callback);
-      },
-      book_instance(callback) {
-        BookInstance.find({ book: req.params.id })
-          .exec(callback);
-      },
-    }, (err, results) => {
-      if (err) {
-        next(err);
-      } else if (results.book == null) { // No results.
-        const e = new Error('Book not found');
-        e.status = 404;
-        next(e);
-      } else {
-        // Successful, so render.
-        res.render('book_detail', { title: 'Title', book: results.book, book_instances: results.book_instance });
-      }
-    });
-  });
+  .get(handleError(async (req, res, next) => {
+    const [book, bookInstances] = await Promise.all([
+      Book.findById(req.params.id).populate('author').populate('genre').exec(),
+      BookInstance.find({ book: req.params.id }).exec(),
+    ]);
+
+    if (book === null) {
+      const err = new Error('Book not found');
+      err.status = 404;
+      throw err;
+    }
+
+    res.render('book_detail', { title: 'Title', book, bookInstances } );
+  }));
 
 
 module.exports = router;

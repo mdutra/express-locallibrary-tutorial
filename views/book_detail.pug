@@ -15,7 +15,7 @@ block content
   div(style='margin-left:20px;margin-top:20px')
     h4 Copies
     
-    each val in book_instances
+    each val in bookInstances
       hr
       if val.status=='Available'
         p.text-success #{val.status}
