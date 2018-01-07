@@ -71,6 +71,12 @@ app.use((err, req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
+  // If there was a response already
+  if (res.headersSent) {
+    // Use Express default error handler
+    return next(err)
+  }
+
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
