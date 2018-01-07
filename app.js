@@ -61,7 +61,15 @@ app.use((req, res, next) => {
   next(err);
 });
 
-// error handler
+app.use((err, req, res, next) => {
+  if (err instanceof mongoose.CastError) {
+    err.message = `${err.stringValue} is an invalid ID`;
+    err.status = 422;
+  }
+
+  next(err);
+});
+
 app.use((err, req, res, next) => {
   // set locals, only providing error in development
   res.locals.message = err.message;
