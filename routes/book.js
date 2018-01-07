@@ -147,53 +147,33 @@ router.route('/:_id/update')
   );
 
 router.route('/:id/delete')
-  .get((req, res, next) => {
-    async.parallel({
-      book(callback) {
-        Book.findById(req.params.id).populate('author').populate('genre').exec(callback);
-      },
-      book_bookinstances(callback) {
-        BookInstance.find({ book: req.params.id }).exec(callback);
-      },
-    }, (err, results) => {
-      if (err) {
-        next(err);
-      } else if (results.book == null) { // No results.
-        res.redirect('/books');
-      } else {
-        // Successful, so render
-        res.render('book_delete', { title: 'Delete Book', book: results.book, book_instances: results.book_bookinstances });
-      }
-    });
-  })
-  .post((req, res, next) => {
-    // Assume the post has valid id (ie no validation/sanitization).
-    async.parallel({
-      book(callback) {
-        Book.findById(req.params.id).populate('author').populate('genre').exec(callback);
-      },
-      book_bookinstances(callback) {
-        BookInstance.find({ book: req.params.id }).exec(callback);
-      },
-    }, (err, results) => {
-      if (err) {
-        next(err);
-      } else if (results.book_bookinstances.length > 0) {
-        // Book has book_instances. Render in same way as for GET route.
-        res.render('book_delete', { title: 'Delete Book', book: results.book, book_instances: results.book_bookinstances });
-      } else {
-        // Book has no BookInstance objects. Delete object and redirect to the list of books.
-        Book.findByIdAndRemove(req.body.id, (e) => {
-          if (e) {
-            next(e);
-          } else {
-            // Success - got to books list
-            res.redirect('/books');
-          }
-        });
-      }
-    });
-  });
+  .get(handleError(async (req, res, next) => {
+    const [book, bookInstances] = await Promise.all([
+      Book.findById(req.params.id).populate('author').populate('genre').exec(),
+      BookInstance.find({ book: req.params.id }).exec(),
+    ]);
+
+    if (book === null) {
+      const err = new Error('Book not found');
+      err.status = 404;
+      throw err;
+    }
+
+    res.render('book_delete', { title: 'Delete Book', book, bookInstances });
+  }))
+  .post(handleError(async (req, res, next) => {
+    const [book, bookInstances] = await Promise.all([
+      Book.findById(req.params.id).populate('author').populate('genre').exec(),
+      BookInstance.find({ book: req.body.id }).exec(),
+    ]);
+
+    if (bookInstances.length) {
+      res.render('book_delete', { title: 'Delete Book', book, bookInstances });
+    } else {
+      await Book.findByIdAndRemove(req.body.id);
+      res.redirect('/books');
+    }
+  }));
 
 // NOTE: This must go after /create
 router.route('/:id')

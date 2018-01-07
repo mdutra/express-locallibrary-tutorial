@@ -15,7 +15,7 @@ block content
 
   hr
   
-  if book_instances.length
+  if bookInstances.length
   
     p #[strong Delete the following copies before attempting to delete this Book.]
   
@@ -23,19 +23,19 @@ block content
 
       h4 Copies
     
-        each book_copy in book_instances
+        each bookCopy in bookInstances
           hr
-          if book_copy.status=='Available'
-            p.text-success #{book_copy.status}
-          else if book_copy.status=='Maintenance'
-            p.text-danger #{book_copy.status}
+          if bookCopy.status=='Available'
+            p.text-success #{bookCopy.status}
+          else if bookCopy.status=='Maintenance'
+            p.text-danger #{bookCopy.status}
           else
-            p.text-warning #{book_copy.status} 
-          p #[strong Imprint:] #{book_copy.imprint}
-          if book_copy.status!='Available'
-            p #[strong Due back:] #{book_copy.due_back}
+            p.text-warning #{bookCopy.status} 
+          p #[strong Imprint:] #{bookCopy.imprint}
+          if bookCopy.status!='Available'
+            p #[strong Due back:] #{bookCopy.due_back}
           p #[strong Id:] 
-            a(href=book_copy.url) #{book_copy._id}
+            a(href=bookCopy.url) #{bookCopy._id}
 
   else
     p Do you really want to delete this Book?
