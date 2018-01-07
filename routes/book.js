@@ -97,7 +97,7 @@ router.route('/create')
 router.route('/:_id/update')
   .get(
     handleError(async (req, res, next) => {
-      const book = await Book.findById(req.params._id);
+      const book = await Book.findById(req.params._id).exec();
 
       if (book === null) {
         const err = new Error('Book not found');
