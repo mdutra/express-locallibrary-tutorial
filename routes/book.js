@@ -11,7 +11,7 @@ const Genre = require('../models/genre');
 
 
 // Get checkbox and drop down option names
-const listOptions = handleError(async (req, res, next) => {
+const loadOptions = handleError(async (req, res, next) => {
   const [authors, genres] = await Promise.all([Author.find().exec(), Genre.find().exec()]);
 
   Object.assign(res.locals, { authors, genres });
@@ -59,7 +59,7 @@ function loadFormErrors(err, req, res, next) {
 }
 
 // Mark selected genres as checked if that's the case
-function markCheckboxes(req, res, next) {
+function loadCheckboxes(req, res, next) {
   const selected = res.locals.book.genre;
   const { genres } = res.locals;
 
@@ -74,7 +74,7 @@ function markCheckboxes(req, res, next) {
 
 router.route('/create')
   .get(
-    listOptions,
+    loadOptions,
 
     (req, res) => {
       res.render('book_form', { title: 'Create Book' });
@@ -91,9 +91,9 @@ router.route('/create')
 
     loadFormErrors,
 
-    listOptions,
+    loadOptions,
 
-    markCheckboxes,
+    loadCheckboxes,
 
     (req, res, next) => {
       res.render('book_form', { title: 'Create Book' });
@@ -116,9 +116,9 @@ router.route('/:_id/update')
       next();
     }),
 
-    listOptions,
+    loadOptions,
 
-    markCheckboxes,
+    loadCheckboxes,
 
     (req, res) => {
       res.render('book_form', { title: 'Update Book' });
@@ -134,9 +134,9 @@ router.route('/:_id/update')
 
     loadFormErrors,
 
-    listOptions,
+    loadOptions,
 
-    markCheckboxes,
+    loadCheckboxes,
 
     (req, res, next) => {
       res.render('book_form', { title: 'Update Book' });
