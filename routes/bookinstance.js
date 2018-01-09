@@ -1,74 +1,92 @@
 const router = require('express').Router();
-const async = require('async');
 const { body, validationResult } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
+
+const { handleError } = require('../utils');
 
 const Book = require('../models/book');
 const BookInstance = require('../models/bookinstance');
 
+const renderForm = handleError(async (req, res, next) => {
+  res.render('bookinstance_form', {
+    title: 'Create BookInstance',
+    bookList: await Book.find({}, 'title').exec(),
+  });
+});
+
+const validateForm = [
+  // Validate fields
+  body('book', 'Book must be specified').isLength({ min: 1 }).trim(),
+  body('imprint', 'Imprint must be specified').isLength({ min: 1 }).trim(),
+  body('due_back', 'Invalid date').optional({ checkFalsy: true }).isISO8601(),
+
+  // Sanitize fields
+  sanitizeBody('book').trim().escape(),
+  sanitizeBody('imprint').trim().escape(),
+  sanitizeBody('status').trim().escape(),
+  sanitizeBody('due_back').toDate(),
+];
 
 router.route('/create')
-  .get((req, res, next) => {
-    Book.find({}, 'title')
-      .exec((err, books) => {
-        if (err) {
-          next(err);
-        } else {
-          // Successful, so render.
-          res.render('bookinstance_form', { title: 'Create BookInstance', book_list: books });
-        }
-      });
-  })
+  .get(renderForm)
   .post(
-    // Validate fields
-    body('book', 'Book must be specified').isLength({ min: 1 }).trim(),
-    body('imprint', 'Imprint must be specified').isLength({ min: 1 }).trim(),
-    body('due_back', 'Invalid date').optional({ checkFalsy: true }).isISO8601(),
+    validateForm,
 
-    // Sanitize fields
-    sanitizeBody('book').trim().escape(),
-    sanitizeBody('imprint').trim().escape(),
-    sanitizeBody('status').trim().escape(),
-    sanitizeBody('due_back').toDate(),
-
-    // Process request after validation and sanitization
-    (req, res, next) => {
-      // Extract the validation errors from a request.
+    handleError(async (req, res, next) => {
+      const bookinstance = new BookInstance(req.body);
       const errors = validationResult(req);
 
-      // Create a BookInstance object with escaped and trimmed data.
-      const bookinstance = new BookInstance({
-        book: req.body.book,
-        imprint: req.body.imprint,
-        status: req.body.status,
-        due_back: req.body.due_back,
-      });
-
-      if (!errors.isEmpty()) {
-        // There are errors. Render form again with sanitized values and error messages.
-        Book.find({}, 'title')
-          .exec((err, books) => {
-            if (err) {
-              next(err);
-            } else {
-              // Successful, so render.
-              res.render('bookinstance_form', {
-                title: 'Create BookInstance', book_list: books, selected_book: bookinstance.book._id, errors: errors.array(), bookinstance,
-              });
-            }
-          });
+      if (errors.isEmpty()) {
+        res.redirect((await bookinstance.save()).url);
       } else {
-        // Data from form is valid
-        bookinstance.save((err) => {
-          if (err) {
-            next(err);
-          } else {
-            // Successful - redirect to new record.
-            res.redirect(bookinstance.url);
-          }
+        res.locals.bookinstance = bookinstance;
+        res.locals.selected_book = bookinstance.book._id;
+        res.locals.errors = errors.array();
+
+        next();
+      }
+    }),
+
+    renderForm,
+  );
+
+router.route('/:_id/update')
+  .get(handleError(async (req, res, next) => {
+    const [bookinstance, bookList] = await Promise.all([
+      BookInstance.findById(req.params._id).populate('book').exec(),
+      Book.find({}, 'title').exec(),
+    ]);
+
+    if (bookinstance === null) { // No results.
+      const e = new Error('Book copy not found');
+      e.status = 404;
+      next(e);
+    } else {
+      res.render('bookinstance_form', {
+        title: 'Update BookInstance', bookList: bookList, bookinstance, selected_book: bookinstance.book._id,
+      });
+    }
+  }))
+  .post(
+    validateForm,
+
+    // Process request after validation and sanitization
+    handleError(async (req, res, next) => {
+      const bookinstance = new BookInstance(Object.assign(req.body, req.params));
+      const errors = validationResult(req);
+
+      if (errors.isEmpty()) {
+        res.redirect((await BookInstance.findByIdAndUpdate(req.params._id, bookinstance)).url);
+      } else {
+        res.render('bookinstance_form', {
+          title: 'Update BookInstance',
+          bookList: await Book.find({}, 'title').exec(),
+          bookinstance,
+          selected_book: bookinstance.book._id,
+          errors: errors.array(),
         });
       }
-    },
+    }),
   );
 
 router.route('/:id/delete')
@@ -97,85 +115,6 @@ router.route('/:id/delete')
       }
     });
   });
-
-router.route('/:id/update')
-  .get((req, res, next) => {
-    // Get book, authors and genres for form.
-    async.parallel({
-      bookinstance(callback) {
-        BookInstance.findById(req.params.id).populate('book').exec(callback);
-      },
-      books(callback) {
-        Book.find(callback);
-      },
-
-    }, (err, results) => {
-      if (err) {
-        next(err);
-      } else if (results.bookinstance == null) { // No results.
-        const e = new Error('Book copy not found');
-        e.status = 404;
-        next(e);
-      } else {
-        // Success.
-        res.render('bookinstance_form', {
-          title: 'Update  BookInstance', book_list: results.books, selected_book: results.bookinstance.book._id, bookinstance: results.bookinstance,
-        });
-      }
-    });
-  })
-  .post(
-    // Validate fields
-    body('book', 'Book must be specified').isLength({ min: 1 }).trim(),
-    body('imprint', 'Imprint must be specified').isLength({ min: 1 }).trim(),
-    body('due_back', 'Invalid date').optional({ checkFalsy: true }).isISO8601(),
-
-    // Sanitize fields
-    sanitizeBody('book').trim().escape(),
-    sanitizeBody('imprint').trim().escape(),
-    sanitizeBody('status').trim().escape(),
-    sanitizeBody('due_back').toDate(),
-
-    // Process request after validation and sanitization
-    (req, res, next) => {
-      // Extract the validation errors from a request
-      const errors = validationResult(req);
-
-      // Create a BookInstance object with escaped/trimmed data and current id.
-      const bookinstance = new BookInstance({
-        book: req.body.book,
-        imprint: req.body.imprint,
-        status: req.body.status,
-        due_back: req.body.due_back,
-        _id: req.params.id,
-      });
-
-      if (!errors.isEmpty()) {
-        // There are errors so render the form again, passing sanitized values and errors
-        Book.find({}, 'title')
-          .exec((err, books) => {
-            if (err) {
-              next(err);
-            } else {
-              // Successful, so render.
-              res.render('bookinstance_form', {
-                title: 'Update BookInstance', book_list: books, selected_book: bookinstance.book._id, errors: errors.array(), bookinstance,
-              });
-            }
-          });
-        return;
-      }
-      // Data from form is valid.
-      BookInstance.findByIdAndUpdate(req.params.id, bookinstance, {}, (err, thebookinstance) => {
-        if (err) {
-          next(err);
-        } else {
-          // Successful - redirect to detail page.
-          res.redirect(thebookinstance.url);
-        }
-      });
-    },
-  );
 
 // NOTE: This must go after route /create
 router.route('/:id')

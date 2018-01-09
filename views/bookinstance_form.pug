@@ -7,7 +7,7 @@ block content
     div.form-group
       label(for='book') Book:
       select#book.form-control(type='select', placeholder='Select book' name='book' required='true' )
-        for book in book_list
+        for book in bookList
           option(value=book._id, selected=(selected_book==book._id.toString() ? 'selected' : false) ) #{book.title}
         
     div.form-group
