@@ -45,7 +45,7 @@ const validateForm = [
   throwValidationResult,
 ];
 
-function renderFormWithErrors(err, req, res, next) {
+function loadFormErrors(err, req, res, next) {
   if (err.message === 'Validation failed') { // Not a good way to check the error
     Object.assign(res.locals, {
       book: req.body,
@@ -89,7 +89,7 @@ router.route('/create')
       res.redirect((await book.save()).url);
     }),
 
-    renderFormWithErrors,
+    loadFormErrors,
 
     listOptions,
 
@@ -132,7 +132,7 @@ router.route('/:_id/update')
       res.redirect((await Book.findByIdAndUpdate(req.params._id, book)).url);
     }),
 
-    renderFormWithErrors,
+    loadFormErrors,
 
     listOptions,
 
