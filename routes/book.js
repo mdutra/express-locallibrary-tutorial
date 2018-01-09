@@ -1,8 +1,8 @@
 const router = require('express').Router();
-const { body, validationResult } = require('express-validator/check');
+const { body } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
 
-const { handleError } = require('../utils');
+const { handleError, throwValidationResult } = require('../utils');
 
 const Author = require('../models/author');
 const Book = require('../models/book');
@@ -14,8 +14,7 @@ const Genre = require('../models/genre');
 const listOptions = handleError(async (req, res, next) => {
   const [authors, genres] = await Promise.all([Author.find().exec(), Genre.find().exec()]);
 
-  res.locals.authors = authors;
-  res.locals.genres = genres;
+  Object.assign(res.locals, { authors, genres });
 
   next();
 });
@@ -42,7 +41,22 @@ const validateForm = [
   // Sanitize fields
   sanitizeBody('*').trim().escape(),
   sanitizeBody('genre.*').trim().escape(),
+
+  throwValidationResult,
 ];
+
+function renderFormWithErrors(err, req, res, next) {
+  if (err.message === 'Validation failed') { // Not a good way to check the error
+    Object.assign(res.locals, {
+      book: req.body,
+      errors: err.array(),
+    });
+
+    next();
+  } else {
+    next(err);
+  }
+}
 
 // Mark selected genres as checked if that's the case
 function markCheckboxes(req, res, next) {
@@ -69,20 +83,13 @@ router.route('/create')
   .post(
     validateForm,
 
+    // Save book if validation passed
     handleError(async (req, res, next) => {
       const book = new Book(req.body);
-      const err = validationResult(req);
-
-      if (err.isEmpty()) {
-        res.redirect((await book.save()).url);
-      } else {
-        // Render the page again
-        res.locals.book = book;
-        res.locals.errors = err.array();
-
-        next();
-      }
+      res.redirect((await book.save()).url);
     }),
+
+    renderFormWithErrors,
 
     listOptions,
 
@@ -104,7 +111,7 @@ router.route('/:_id/update')
         throw err;
       }
 
-      res.locals.book = book;
+      Object.assign(res.locals, { book });
 
       next();
     }),
@@ -122,19 +129,10 @@ router.route('/:_id/update')
 
     handleError(async (req, res, next) => {
       const book = new Book(Object.assign(req.body, req.params));
-      const err = validationResult(req);
-
-      if (err.isEmpty()) {
-        res.redirect((await Book.findByIdAndUpdate(req.params._id, book)).url);
-      } else {
-        // Render the page again
-        res.locals.book = book;
-        res.locals.errors = err.array();
-        res.locals.title = 'Update Book';
-
-        next();
-      }
+      res.redirect((await Book.findByIdAndUpdate(req.params._id, book)).url);
     }),
+
+    renderFormWithErrors,
 
     listOptions,
 
