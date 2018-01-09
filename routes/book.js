@@ -129,7 +129,7 @@ router.route('/:_id/update')
       } else {
         // Render the page again
         res.locals.book = book;
-        res.locals.errors = err.mapped();
+        res.locals.errors = err.array();
         res.locals.title = 'Update Book';
 
         next();
