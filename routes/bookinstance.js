@@ -1,18 +1,22 @@
 const router = require('express').Router();
-const { body, validationResult } = require('express-validator/check');
+const { body } = require('express-validator/check');
 const { sanitizeBody } = require('express-validator/filter');
 
-const { handleError } = require('../utils');
+const { handleError, throwValidationResult } = require('../utils');
 
 const Book = require('../models/book');
 const BookInstance = require('../models/bookinstance');
 
-const renderForm = handleError(async (req, res, next) => {
-  res.render('bookinstance_form', {
-    title: 'Create BookInstance',
-    bookList: await Book.find({}, 'title').exec(),
-  });
+const loadBookOptions = handleError(async (req, res, next) => {
+  res.locals.bookList = await Book.find({}, 'title').exec();
+  next();
 });
+
+function renderForm({ title }) {
+  return (req, res) => {
+    res.render('bookinstance_form', { title });
+  };
+}
 
 const validateForm = [
   // Validate fields
@@ -25,68 +29,75 @@ const validateForm = [
   sanitizeBody('imprint').trim().escape(),
   sanitizeBody('status').trim().escape(),
   sanitizeBody('due_back').toDate(),
+
+  throwValidationResult,
 ];
 
+function loadFormErrors(err, req, res, next) {
+  if (err.message === 'Validation failed') { // Not a good way to check the error
+    Object.assign(res.locals, {
+      bookinstance: req.body,
+      selected_book: req.body.book._id,
+      errors: err.array(),
+    });
+
+    next();
+  } else {
+    next(err);
+  }
+}
+
 router.route('/create')
-  .get(renderForm)
+  .get(
+    loadBookOptions,
+    renderForm({ title: 'Create Book Instance' }),
+  )
   .post(
     validateForm,
 
     handleError(async (req, res, next) => {
       const bookinstance = new BookInstance(req.body);
-      const errors = validationResult(req);
-
-      if (errors.isEmpty()) {
-        res.redirect((await bookinstance.save()).url);
-      } else {
-        res.locals.bookinstance = bookinstance;
-        res.locals.selected_book = bookinstance.book._id;
-        res.locals.errors = errors.array();
-
-        next();
-      }
+      res.redirect((await bookinstance.save()).url);
     }),
 
-    renderForm,
+    loadFormErrors,
+    loadBookOptions,
+    renderForm({ title: 'Create Book Instance' }),
   );
 
 router.route('/:_id/update')
-  .get(handleError(async (req, res, next) => {
-    const [bookinstance, bookList] = await Promise.all([
-      BookInstance.findById(req.params._id).populate('book').exec(),
-      Book.find({}, 'title').exec(),
-    ]);
+  .get(
+    handleError(async (req, res, next) => {
+      const bookinstance = await BookInstance.findById(req.params._id).populate('book').exec();
 
-    if (bookinstance === null) { // No results.
-      const e = new Error('Book copy not found');
-      e.status = 404;
-      next(e);
-    } else {
-      res.render('bookinstance_form', {
-        title: 'Update BookInstance', bookList: bookList, bookinstance, selected_book: bookinstance.book._id,
+      if (res.locals.bookinstance === null) { // No results.
+        const err = new Error('Book copy not found');
+        err.status = 404;
+        throw err;
+      }
+
+      Object.assign(res.locals, {
+        bookinstance,
+        selected_book: bookinstance.book._id,
       });
-    }
-  }))
+
+      next();
+    }),
+
+    loadBookOptions,
+    renderForm({ title: 'Update Book Instance' }),
+  )
   .post(
     validateForm,
 
-    // Process request after validation and sanitization
     handleError(async (req, res, next) => {
       const bookinstance = new BookInstance(Object.assign(req.body, req.params));
-      const errors = validationResult(req);
-
-      if (errors.isEmpty()) {
-        res.redirect((await BookInstance.findByIdAndUpdate(req.params._id, bookinstance)).url);
-      } else {
-        res.render('bookinstance_form', {
-          title: 'Update BookInstance',
-          bookList: await Book.find({}, 'title').exec(),
-          bookinstance,
-          selected_book: bookinstance.book._id,
-          errors: errors.array(),
-        });
-      }
+      res.redirect((await BookInstance.findByIdAndUpdate(req.params._id, bookinstance)).url);
     }),
+
+    loadFormErrors,
+    loadBookOptions,
+    renderForm({ title: 'Update Book Instance' }),
   );
 
 router.route('/:id/delete')
