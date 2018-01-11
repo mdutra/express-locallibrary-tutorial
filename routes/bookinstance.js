@@ -7,15 +7,13 @@ const { handleError, throwValidationResult } = require('../utils');
 const Book = require('../models/book');
 const BookInstance = require('../models/bookinstance');
 
-const loadBookOptions = handleError(async (req, res, next) => {
-  res.locals.bookList = await Book.find({}, 'title').exec();
-  next();
-});
-
 function renderForm({ title }) {
-  return (req, res) => {
-    res.render('bookinstance_form', { title });
-  };
+  return handleError(async (req, res) => {
+    res.render('bookinstance_form', {
+      title,
+      bookList: await Book.find({}, 'title').exec(),
+    });
+  });
 }
 
 const validateForm = [
@@ -48,10 +46,7 @@ function loadFormErrors(err, req, res, next) {
 }
 
 router.route('/create')
-  .get(
-    loadBookOptions,
-    renderForm({ title: 'Create Book Instance' }),
-  )
+  .get(renderForm({ title: 'Create Book Instance' }))
   .post(
     validateForm,
 
@@ -61,7 +56,6 @@ router.route('/create')
     }),
 
     loadFormErrors,
-    loadBookOptions,
     renderForm({ title: 'Create Book Instance' }),
   );
 
@@ -84,7 +78,6 @@ router.route('/:_id/update')
       next();
     }),
 
-    loadBookOptions,
     renderForm({ title: 'Update Book Instance' }),
   )
   .post(
@@ -96,7 +89,6 @@ router.route('/:_id/update')
     }),
 
     loadFormErrors,
-    loadBookOptions,
     renderForm({ title: 'Update Book Instance' }),
   );
 
