@@ -19,6 +19,12 @@ const loadOptions = handleError(async (req, res, next) => {
   next();
 });
 
+function renderForm({ title }) {
+  return (req, res) => {
+    res.render('book_form', { title });
+  };
+}
+
 const validateForm = [
   // Convert the genre to an array
   (req, res, next) => {
@@ -76,9 +82,7 @@ router.route('/create')
   .get(
     loadOptions,
 
-    (req, res) => {
-      res.render('book_form', { title: 'Create Book' });
-    },
+    renderForm({ title: 'Create Book' }),
   )
   .post(
     validateForm,
@@ -90,14 +94,9 @@ router.route('/create')
     }),
 
     loadFormErrors,
-
     loadOptions,
-
     loadCheckboxes,
-
-    (req, res, next) => {
-      res.render('book_form', { title: 'Create Book' });
-    },
+    renderForm({ title: 'Create Book' }),
   );
 
 router.route('/:_id/update')
@@ -117,12 +116,8 @@ router.route('/:_id/update')
     }),
 
     loadOptions,
-
     loadCheckboxes,
-
-    (req, res) => {
-      res.render('book_form', { title: 'Update Book' });
-    },
+    renderForm({ title: 'Update Book' }),
   )
   .post(
     validateForm,
@@ -133,14 +128,9 @@ router.route('/:_id/update')
     }),
 
     loadFormErrors,
-
     loadOptions,
-
     loadCheckboxes,
-
-    (req, res, next) => {
-      res.render('book_form', { title: 'Update Book' });
-    },
+    renderForm({ title: 'Update Book' }),
   );
 
 router.route('/:id/delete')
