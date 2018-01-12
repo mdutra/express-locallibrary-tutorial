@@ -9,20 +9,30 @@ const Book = require('../models/book');
 const BookInstance = require('../models/bookinstance');
 const Genre = require('../models/genre');
 
+function markCheckboxes(genres, selected) {
+  // All genres as objects
+  const allGenres = genres;
+  // All genres but only the IDs
+  const allGenresIDs = genres.map(genre => genre._id.toString());
 
-// Get checkbox and drop down option names
-const loadOptions = handleError(async (req, res, next) => {
-  const [authors, genres] = await Promise.all([Author.find().exec(), Genre.find().exec()]);
-
-  Object.assign(res.locals, { authors, genres });
-
-  next();
-});
+  selected.forEach((item) => {
+    let i = allGenresIDs.indexOf(item.toString()); // Get the index of the selected genre
+    allGenres[i].checked = 'true'; // Modify the genre to checked
+  });
+}
 
 function renderForm({ title }) {
-  return (req, res) => {
-    res.render('book_form', { title });
-  };
+  return handleError(async (req, res) => {
+    const [authors, genres] = await Promise.all([Author.find().exec(), Genre.find().exec()]);
+
+    // If there is data to fill the form
+    if (res.locals.book) {
+      // Fill the checkboxes modifing the genres list
+      markCheckboxes(genres, res.locals.book.genre);
+    }
+
+    res.render('book_form', { title, authors, genres });
+  });
 }
 
 const validateForm = [
@@ -64,26 +74,8 @@ function loadFormErrors(err, req, res, next) {
   }
 }
 
-// Mark selected genres as checked if that's the case
-function loadCheckboxes(req, res, next) {
-  const selected = res.locals.book.genre;
-  const { genres } = res.locals;
-
-  for (let i = 0; i < genres.length; i += 1) {
-    if (selected.indexOf(genres[i]._id) > -1) {
-      genres[i].checked = 'true';
-    }
-  }
-
-  next();
-}
-
 router.route('/create')
-  .get(
-    loadOptions,
-
-    renderForm({ title: 'Create Book' }),
-  )
+  .get(renderForm({ title: 'Create Book' }))
   .post(
     validateForm,
 
@@ -94,8 +86,6 @@ router.route('/create')
     }),
 
     loadFormErrors,
-    loadOptions,
-    loadCheckboxes,
     renderForm({ title: 'Create Book' }),
   );
 
@@ -115,8 +105,6 @@ router.route('/:_id/update')
       next();
     }),
 
-    loadOptions,
-    loadCheckboxes,
     renderForm({ title: 'Update Book' }),
   )
   .post(
@@ -128,8 +116,6 @@ router.route('/:_id/update')
     }),
 
     loadFormErrors,
-    loadOptions,
-    loadCheckboxes,
     renderForm({ title: 'Update Book' }),
   );
 
