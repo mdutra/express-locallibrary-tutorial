@@ -16,7 +16,7 @@ function markCheckboxes(genres, selected) {
   const allGenresIDs = genres.map(genre => genre._id.toString());
 
   selected.forEach((item) => {
-    let i = allGenresIDs.indexOf(item.toString()); // Get the index of the selected genre
+    const i = allGenresIDs.indexOf(item.toString()); // Get the index of the selected genre
     allGenres[i].checked = 'true'; // Modify the genre to checked
   });
 }
